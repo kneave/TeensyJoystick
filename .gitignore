@@ -353,5 +353,4 @@ MigrationBackup/
 .vscode/*
 
 # PlatformIO
-
 .pio/*
