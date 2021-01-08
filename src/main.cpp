@@ -36,9 +36,12 @@ const int encButton = 10;
 volatile long angle = 0;
 
 //  LED pins
-const int redLed = 13;
-const int greenLed = 15;
-const int blueLed = 14;
+enum colour
+{
+  RED = 13,
+  GREEN = 15,
+  BLUE = 14
+};
 
 //  RGB State
 //  states [red, green, blue] map to [0, 1, 2]
@@ -47,12 +50,7 @@ int state = 0;
 unsigned long lastChange = 0;
 unsigned long timeout = 250;
 
-enum colour
-{
-  RED = 13,
-  GREEN = 15,
-  BLUE = 14
-};
+
 
 //  Sets the brightness of an LED on a given pin
 void SetLED(colour led, float value)
@@ -126,9 +124,9 @@ void setup()
   pinMode(encButton, INPUT);
 
   //  Set the LED pins to output
-  pinMode(redLed, OUTPUT);
-  pinMode(greenLed, OUTPUT);
-  pinMode(blueLed, OUTPUT);
+  pinMode(RED, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  pinMode(BLUE, OUTPUT);
 
   lastChange = millis();
 
