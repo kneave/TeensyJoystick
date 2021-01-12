@@ -1,21 +1,14 @@
 #include <Arduino.h>
 #include <Encoder.h>
 
-/*
+/* 
+  Based on the Complete USB Joystick Example
+  Teensy becomes a USB joystick with 16 or 32 buttons and 6 axis input, this one is in "extreme mode".
+
   BIG NOTE!
+  This wont work unless you change JOYSTICK_SIZE to 64 in ".platformio\packages\framework_arduinoteensy\cores\teensy4\usb_desc.h"
 
-    This wont work unless you change JOYSTICK_SIZE to 64 in usb_desc.h
-*/
-
-/* Complete USB Joystick Example
-   Teensy becomes a USB joystick with 16 or 32 buttons and 6 axis input
-
-   You must select Joystick from the "Tools > USB Type" menu
-
-   Pushbuttons should be connected between the digital pins and ground.
-   Potentiometers should be connected to analog inputs 0 to 5.
-
-   This example code is in the public domain.
+  The USB mode of the Teensy is set using a build flag in the platform.ini file.
 */
 
 // Configure the number of buttons.  Be careful not
@@ -29,6 +22,12 @@ const int joy1button = 23;
 const int joy2button = 16;
 const int encButton = 10;
 
+byte allButtons[numButtons];
+byte prevButtons[numButtons];
+byte encoderPrev;
+
+volatile long angle = 0;
+
 const int deadzone = 3000;
 const int midPoint = 32767;
 const int lowPoint =  midPoint - deadzone;
@@ -36,13 +35,31 @@ const int highPoint = midPoint + deadzone;
 
 Encoder enc(12, 11);
 
-const int redLed = 13;
-const int greenLed = 15;
-const int blueLed = 14;
+//  LED pins
+enum colour
+{
+  RED = 13,
+  GREEN = 15,
+  BLUE = 14
+};
 
-int state = -1;
+//  RGB State
+//  states [red, green, blue] map to [0, 1, 2]
+//  The timeout and lastChange are used to debounce between loops
+int state = 0;
 unsigned long lastChange = 0;
-unsigned long changeInterval = 1000;
+unsigned long timeout = 250;
+
+//  Sets the brightness of an LED on a given pin
+void SetLED(colour led, float value)
+{
+  //  I've implemented this method as the LEDs are common anode, this means that rather than providing
+  //  the voltage for the LED we're adjusting the value of the drain. This varies the potential between
+  //  the the anode and cathode in the same way but is "backwards" from what most of us are used to.
+
+  int newValue = map(value, 0, 1, 255, 0);
+  analogWrite(led, newValue);
+}
 
 void setup()
 {
@@ -60,23 +77,14 @@ void setup()
   pinMode(joy2button, INPUT_PULLUP);
   pinMode(encButton, INPUT);
 
-  pinMode(redLed, OUTPUT);
-  pinMode(greenLed, OUTPUT);
-  pinMode(blueLed, OUTPUT);
-
-  analogWrite(redLed, 255);
-  analogWrite(blueLed, 255);
-  analogWrite(greenLed, 255);
+  pinMode(RED, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  pinMode(BLUE, OUTPUT);
 
   enc.write(512);
 
-  Serial.println("Begin Complete Joystick Test");
+  Serial.println("Joystick Setup Complete.");
 }
-
-byte allButtons[numButtons];
-byte prevButtons[numButtons];
-
-volatile long angle = 0;
 
 int CheckAxisValue(int value, bool invert)
 {
@@ -98,29 +106,33 @@ int CheckAxisValue(int value, bool invert)
   return value;
 }
 
-void UpdateLED()
+//  This currently just sets between R, G, and B colours
+//  Brighness is taken from the hat angle
+void UpdateLED(bool change)
 {
+  //  "/ 100" creates a float
+  float brightness = map(angle, 0, 1024, 0, 100) / 100.0;
   switch (state)
   {
   case 0:
-    analogWrite(redLed, 127);
-    analogWrite(blueLed, 255);
-    analogWrite(greenLed, 255);
+    SetLED(RED, brightness);
+    SetLED(GREEN, 0);
+    SetLED(BLUE, 0);
     break;
   case 1:
-    analogWrite(redLed, 255);
-    analogWrite(blueLed, 127);
-    analogWrite(greenLed, 255);
+    SetLED(RED, 0);
+    SetLED(GREEN, brightness);
+    SetLED(BLUE, 0);
     break;
   case 2:
-    analogWrite(redLed, 255);
-    analogWrite(blueLed, 255);
-    analogWrite(greenLed, 127);
+    SetLED(RED, 0);
+    SetLED(GREEN, 0);
+    SetLED(BLUE, brightness);
     break;
   }
 
-  unsigned long timeDiff = millis() - lastChange;
-  if (timeDiff >= changeInterval)
+  //  Update only if button pressedn and not in timeout
+  if (change && (millis() - lastChange > timeout))
   {
     state++;
     if (state > 2)
@@ -128,6 +140,7 @@ void UpdateLED()
       state = 0;
     }
     lastChange = millis();
+    Serial.println("Brightness: " + String(brightness));
   }
 }
 
@@ -170,8 +183,11 @@ void loop()
   Joystick.button(6, !allButtons[5]);
 
   Joystick.button(7, joy1State == LOW);
-  Joystick.button(8, joy2State == LOW);
-  Joystick.button(9, encButtonState == HIGH);
+  Joystick.button(8, joy2State == LOW);  
+  
+  //  Common anode on this so inverted to the "norm"
+  bool encPressed = encButtonState == HIGH;
+  Joystick.button(9, encPressed);
 
   // make the hat switch automatically move in a circle
   long newAngle = enc.read();
@@ -217,8 +233,25 @@ void loop()
     }
     Serial.println();
   }
+  
+  bool encoderChanged = false;
+  if (encPressed != encoderPrev)
+  {
+    encoderChanged = true;
+  }
 
-  UpdateLED();
+  UpdateLED(encoderChanged);
+
+  // if any button changed, print them to the serial monitor
+  if (anyChange | encoderChanged)
+  {
+    Serial.print("Buttons: ");
+    for (int i = 0; i < numButtons; i++)
+    {
+      Serial.print(allButtons[i], DEC);
+    }
+    Serial.println();
+  }
 
   // a brief delay, so this runs "only" 200 times per second
   delay(5);
