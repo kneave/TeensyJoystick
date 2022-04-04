@@ -6,7 +6,7 @@
   Teensy becomes a USB joystick with 16 or 32 buttons and 6 axis input, this one is in "extreme mode".
 
   BIG NOTE!
-  This wont work unless you change JOYSTICK_SIZE to 64 in ".platformio\packages\framework_arduinoteensy\cores\teensy4\usb_desc.h"
+  This wont work unless you change JOYSTICK_SIZE to 64 in "%HOME%\.platformio\packages\framework_arduinoteensy\cores\teensy4\usb_desc.h"
 
   The USB mode of the Teensy is set using a build flag in the platform.ini file.
 */
@@ -16,15 +16,24 @@
 // axis.  The pullup resistor will interfere with
 // the analog voltage.
 
-const int numButtons = 6;  // 16 for Teensy, 32 for Teensy++
-const int buttonStart = 2; // 16 for Teensy, 32 for Teensy++
+const int numSwitches = 6;  
+const int firstSwitch = 2; 
 const int joy1button = 23;
 const int joy2button = 16;
 const int encButton = 10;
 
-byte allButtons[numButtons];
-byte prevButtons[numButtons];
+byte allSwitches[numSwitches];
+byte prevSwitches[numSwitches];
 byte encoderPrev;
+
+// Analog pin definitons for the joysticks
+#define LEFT_X   21
+#define LEFT_Y   20
+#define LEFT_Z   22
+
+#define RIGHT_X  19
+#define RIGHT_Y  18
+#define RIGHT_Z  17
 
 volatile long angle = 0;
 
@@ -69,7 +78,7 @@ void setup()
   // control over when the computer receives updates, but it does
   // require you to manually call Joystick.send_now().
   Joystick.useManualSend(true);
-  for (int i = buttonStart; i < buttonStart + numButtons; i++)
+  for (int i = firstSwitch; i < firstSwitch + numSwitches; i++)
   {
     pinMode(i, INPUT_PULLUP);
   }
@@ -147,26 +156,26 @@ void UpdateLED(bool change)
 void loop()
 {
   // read 6 analog inputs and use them for the joystick axis
-  Joystick.X(CheckAxisValue(analogRead(20), true));
-  Joystick.Y(CheckAxisValue(analogRead(21), true));
-  Joystick.Z(CheckAxisValue(analogRead(22), false));
-  Joystick.Xrotate(CheckAxisValue(analogRead(19), true));
-  Joystick.Yrotate(CheckAxisValue(analogRead(18), true));
-  Joystick.Zrotate(CheckAxisValue(analogRead(17), false));
+  Joystick.X(CheckAxisValue(analogRead(LEFT_X), true));
+  Joystick.Y(CheckAxisValue(analogRead(LEFT_Y), true));
+  Joystick.Z(CheckAxisValue(analogRead(LEFT_Z), false));
+  Joystick.Xrotate(CheckAxisValue(analogRead(RIGHT_X), true));
+  Joystick.Yrotate(CheckAxisValue(analogRead(RIGHT_Y), true));
+  Joystick.Zrotate(CheckAxisValue(analogRead(RIGHT_Z), false));
   
   // read digital pins and use them for the buttons
-  for (int i = 0; i < numButtons; i++)
+  for (int i = 0; i < numSwitches; i++)
   {
-    if (digitalRead(i + buttonStart))
+    if (digitalRead(i + firstSwitch))
     {
       // when a pin reads high, the button is not pressed
       // the pullup resistor creates the "on" signal
-      allButtons[i] = 0;
+      allSwitches[i] = 0;
     }
     else
     {
       // when a pin reads low, the button is connecting to ground.
-      allButtons[i] = 1;
+      allSwitches[i] = 1;
     }
   }
 
@@ -175,12 +184,12 @@ void loop()
   int encButtonState = digitalRead(encButton);
 
   //  Set the joystick buttons
-  Joystick.button(1, !allButtons[0]);
-  Joystick.button(2, !allButtons[1]);
-  Joystick.button(3, allButtons[3]);
-  Joystick.button(4, allButtons[2]);
-  Joystick.button(5, !allButtons[4]);
-  Joystick.button(6, !allButtons[5]);
+  Joystick.button(1, !allSwitches[0]);
+  Joystick.button(2, !allSwitches[1]);
+  Joystick.button(3, allSwitches[3]);
+  Joystick.button(4, allSwitches[2]);
+  Joystick.button(5, !allSwitches[4]);
+  Joystick.button(6, !allSwitches[5]);
 
   Joystick.button(7, joy1State == LOW);
   Joystick.button(8, joy2State == LOW);  
@@ -216,20 +225,20 @@ void loop()
 
   // check to see if any button changed since last time
   boolean anyChange = false;
-  for (int i = 0; i < numButtons; i++)
+  for (int i = 0; i < numSwitches; i++)
   {
-    if (allButtons[i] != prevButtons[i])
+    if (allSwitches[i] != prevSwitches[i])
       anyChange = true;
-    prevButtons[i] = allButtons[i];
+    prevSwitches[i] = allSwitches[i];
   }
 
   // if any button changed, print them to the serial monitor
   if (anyChange)
   {
     Serial.print("Buttons: ");
-    for (int i = 0; i < numButtons; i++)
+    for (int i = 0; i < numSwitches; i++)
     {
-      Serial.print(allButtons[i], DEC);
+      Serial.print(allSwitches[i], DEC);
     }
     Serial.println();
   }
@@ -246,9 +255,9 @@ void loop()
   if (anyChange | encoderChanged)
   {
     Serial.print("Buttons: ");
-    for (int i = 0; i < numButtons; i++)
+    for (int i = 0; i < numSwitches; i++)
     {
-      Serial.print(allButtons[i], DEC);
+      Serial.print(allSwitches[i], DEC);
     }
     Serial.println();
   }
