@@ -43,7 +43,7 @@ const int lowPoint =  midPoint - deadzone;
 const int highPoint = midPoint + deadzone;
 
 uint32_t lastReport;
-uint32_t reportInterval = 1000 / 40; // Send updates at 20Hz
+uint32_t reportInterval = 1000 / 50; // Send updates at 50Hz
 
 uint32_t updateLed;
 
@@ -83,7 +83,7 @@ void setup()
   // configure the joystick to manual send mode.  This gives precise
   // control over when the computer receives updates, but it does
   // require you to manually call Joystick.send_now().
-  Joystick.useManualSend(true);
+  // Joystick.useManualSend(true);
 
   updateLed = millis();
 
@@ -172,6 +172,8 @@ void loop()
     SetLED(RED, 1);
     SetLED(GREEN, 0);
     SetLED(BLUE, 0);
+    Serial.print(millis());
+    Serial.print(" no reports sent.");
   }
   else
   {
@@ -214,8 +216,8 @@ void loop()
     //  Set the joystick buttons
     Joystick.button(1, !allSwitches[0]);
     Joystick.button(2, !allSwitches[1]);
-    Joystick.button(3, allSwitches[3]);
-    Joystick.button(4, allSwitches[2]);
+    Joystick.button(3, allSwitches[2]);
+    Joystick.button(4, allSwitches[3]);
     Joystick.button(5, !allSwitches[4]);
     Joystick.button(6, !allSwitches[5]);
 
@@ -273,23 +275,27 @@ void loop()
       encoderChanged = true;
     }
 
+    // if(encoderChanged & tri)
+
     // UpdateLED(encoderChanged);
 
     // if any button changed, print them to the serial monitor
-    // if (anyChange | encoderChanged)
-    // {
-    //   Serial.print("Buttons: ");
-    //   for (int i = 0; i < numSwitches; i++)
-    //   {
-    //     Serial.print(allSwitches[i], DEC);
-    //   }
-    //   Serial.println();
-    // }
+    if (anyChange | encoderChanged)
+    {
+      Serial.print("Buttons: ");
+      Serial.print(!allSwitches[0]);
+      Serial.print(!allSwitches[1]);
+      Serial.print(allSwitches[2]);
+      Serial.print(allSwitches[3]);
+      Serial.print(!allSwitches[4]);
+      Serial.print(!allSwitches[5]);
+      Serial.println();
+    }
 
     // Because setup configured the Joystick manual send,
     // the computer does not see any of the changes yet.
     // This send_now() transmits everything all at once.
-    Joystick.send_now();
+    // Joystick.send_now();
     
     lastReport = millis();
   }
