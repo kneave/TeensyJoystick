@@ -42,6 +42,11 @@ const int midPoint = 32767;
 const int lowPoint =  midPoint - deadzone;
 const int highPoint = midPoint + deadzone;
 
+uint32_t lastReport;
+uint32_t reportInterval = 1000 / 40; // Send updates at 20Hz
+
+uint32_t updateLed;
+
 Encoder enc(12, 11);
 
 //  LED pins
@@ -74,14 +79,19 @@ void setup()
 {
   // you can print to the serial monitor while the joystick is active!
   Serial.begin(9600);
+
   // configure the joystick to manual send mode.  This gives precise
   // control over when the computer receives updates, but it does
   // require you to manually call Joystick.send_now().
   Joystick.useManualSend(true);
+
+  updateLed = millis();
+
   for (int i = firstSwitch; i < firstSwitch + numSwitches; i++)
   {
     pinMode(i, INPUT_PULLUP);
   }
+
   pinMode(joy1button, INPUT_PULLUP);
   pinMode(joy2button, INPUT_PULLUP);
   pinMode(encButton, INPUT);
@@ -91,6 +101,7 @@ void setup()
   pinMode(BLUE, OUTPUT);
 
   enc.write(512);
+  lastReport = millis();
 
   Serial.println("Joystick Setup Complete.");
 }
@@ -155,113 +166,131 @@ void UpdateLED(bool change)
 
 void loop()
 {
-  // read 6 analog inputs and use them for the joystick axis
-  Joystick.X(CheckAxisValue(analogRead(LEFT_X), true));
-  Joystick.Y(CheckAxisValue(analogRead(LEFT_Y), true));
-  Joystick.Z(CheckAxisValue(analogRead(LEFT_Z), false));
-  Joystick.Xrotate(CheckAxisValue(analogRead(RIGHT_X), true));
-  Joystick.Yrotate(CheckAxisValue(analogRead(RIGHT_Y), true));
-  Joystick.Zrotate(CheckAxisValue(analogRead(RIGHT_Z), false));
-  
-  // read digital pins and use them for the buttons
-  for (int i = 0; i < numSwitches; i++)
+  if(millis() - lastReport >= 1000)
   {
-    if (digitalRead(i + firstSwitch))
-    {
-      // when a pin reads high, the button is not pressed
-      // the pullup resistor creates the "on" signal
-      allSwitches[i] = 0;
-    }
-    else
-    {
-      // when a pin reads low, the button is connecting to ground.
-      allSwitches[i] = 1;
-    }
-  }
-
-  int joy1State = digitalRead(joy1button);
-  int joy2State = digitalRead(joy2button);
-  int encButtonState = digitalRead(encButton);
-
-  //  Set the joystick buttons
-  Joystick.button(1, !allSwitches[0]);
-  Joystick.button(2, !allSwitches[1]);
-  Joystick.button(3, allSwitches[3]);
-  Joystick.button(4, allSwitches[2]);
-  Joystick.button(5, !allSwitches[4]);
-  Joystick.button(6, !allSwitches[5]);
-
-  Joystick.button(7, joy1State == LOW);
-  Joystick.button(8, joy2State == LOW);  
-  
-  //  Common anode on this so inverted to the "norm"
-  bool encPressed = encButtonState == HIGH;
-  Joystick.button(9, encPressed);
-
-  // make the hat switch automatically move in a circle
-  long newAngle = enc.read();
-  
-  if (newAngle > 1024)
-  {
-    enc.write(1024);
-    angle = 1024;
-  }
-  else if (newAngle < 0)
-  {
-    enc.write(0);
-    angle = 0;
+    // loop below throwing error
+    SetLED(RED, 1);
+    SetLED(GREEN, 0);
+    SetLED(BLUE, 0);
   }
   else
   {
-    angle = newAngle;
+    // loop below throwing error
+    SetLED(RED, 0);
+    SetLED(GREEN, 1);
+    SetLED(BLUE, 0);
   }
 
-  Joystick.slider(1, angle * 64);
-
-  // Because setup configured the Joystick manual send,
-  // the computer does not see any of the changes yet.
-  // This send_now() transmits everything all at once.
-  Joystick.send_now();
-
-  // check to see if any button changed since last time
-  boolean anyChange = false;
-  for (int i = 0; i < numSwitches; i++)
+  if(millis() - lastReport >= reportInterval)
   {
-    if (allSwitches[i] != prevSwitches[i])
-      anyChange = true;
-    prevSwitches[i] = allSwitches[i];
-  }
-
-  // if any button changed, print them to the serial monitor
-  if (anyChange)
-  {
-    Serial.print("Buttons: ");
+    // read 6 analog inputs and use them for the joystick axis
+    Joystick.X(CheckAxisValue(analogRead(LEFT_X), false));
+    Joystick.Y(CheckAxisValue(analogRead(LEFT_Y), true));
+    Joystick.Z(CheckAxisValue(analogRead(LEFT_Z), true));
+    Joystick.Xrotate(CheckAxisValue(analogRead(RIGHT_X), false));
+    Joystick.Yrotate(CheckAxisValue(analogRead(RIGHT_Y), false));
+    Joystick.Zrotate(CheckAxisValue(analogRead(RIGHT_Z), true));
+    
+    // read digital pins and use them for the buttons
     for (int i = 0; i < numSwitches; i++)
     {
-      Serial.print(allSwitches[i], DEC);
+      if (digitalRead(i + firstSwitch))
+      {
+        // when a pin reads high, the button is not pressed
+        // the pullup resistor creates the "on" signal
+        allSwitches[i] = 0;
+      }
+      else
+      {
+        // when a pin reads low, the button is connecting to ground.
+        allSwitches[i] = 1;
+      }
     }
-    Serial.println();
-  }
-  
-  bool encoderChanged = false;
-  if (encPressed != encoderPrev)
-  {
-    encoderChanged = true;
-  }
 
-  UpdateLED(encoderChanged);
+    int joy1State = digitalRead(joy1button);
+    int joy2State = digitalRead(joy2button);
+    int encButtonState = digitalRead(encButton);
 
-  // if any button changed, print them to the serial monitor
-  if (anyChange | encoderChanged)
-  {
-    Serial.print("Buttons: ");
+    //  Set the joystick buttons
+    Joystick.button(1, !allSwitches[0]);
+    Joystick.button(2, !allSwitches[1]);
+    Joystick.button(3, allSwitches[3]);
+    Joystick.button(4, allSwitches[2]);
+    Joystick.button(5, !allSwitches[4]);
+    Joystick.button(6, !allSwitches[5]);
+
+    Joystick.button(7, joy1State == LOW);
+    Joystick.button(8, joy2State == LOW);  
+    
+    //  Common anode on this so inverted to the "norm"
+    bool encPressed = encButtonState == HIGH;
+    Joystick.button(9, encPressed);
+
+    // make the hat switch automatically move in a circle
+    long newAngle = enc.read();
+    
+    if (newAngle > 1024)
+    {
+      enc.write(1024);
+      angle = 1024;
+    }
+    else if (newAngle < 0)
+    {
+      enc.write(0);
+      angle = 0;
+    }
+    else
+    {
+      angle = newAngle;
+    }
+
+    Joystick.slider(1, angle * 64);
+
+ 
+    // check to see if any button changed since last time
+    boolean anyChange = false;
     for (int i = 0; i < numSwitches; i++)
     {
-      Serial.print(allSwitches[i], DEC);
+      if (allSwitches[i] != prevSwitches[i])
+        anyChange = true;
+      prevSwitches[i] = allSwitches[i];
     }
-    Serial.println();
-  }
 
-  // a brief delay, so this runs "only" 200 times per second
-  delay(5);
+    // if any button changed, print them to the serial monitor
+    // if (anyChange)
+    // {
+    //   Serial.print("Buttons: ");
+    //   for (int i = 0; i < numSwitches; i++)
+    //   {
+    //     Serial.print(allSwitches[i], DEC);
+    //   }
+    //   Serial.println();
+    // }
+    
+    bool encoderChanged = false;
+    if (encPressed != encoderPrev)
+    {
+      encoderChanged = true;
+    }
+
+    // UpdateLED(encoderChanged);
+
+    // if any button changed, print them to the serial monitor
+    // if (anyChange | encoderChanged)
+    // {
+    //   Serial.print("Buttons: ");
+    //   for (int i = 0; i < numSwitches; i++)
+    //   {
+    //     Serial.print(allSwitches[i], DEC);
+    //   }
+    //   Serial.println();
+    // }
+
+    // Because setup configured the Joystick manual send,
+    // the computer does not see any of the changes yet.
+    // This send_now() transmits everything all at once.
+    Joystick.send_now();
+    
+    lastReport = millis();
+  }
 }
