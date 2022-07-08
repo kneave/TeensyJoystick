@@ -8,7 +8,7 @@ The core of this board is a Teensy 4.0 in USB serial/HID mode. This is defined i
 Open the following file:
 `"%HOME%\.platformio\packages\framework_arduinoteensy\cores\teensy4\usb_desc.h"`
 
-Find the definition for `JOYSTICK_SIZE` and change it from 12 to 64. 
+Find the definition for `JOYSTICK_SIZE` and change it from 12 to 64. If you see freezing issues with the joystick, you may want to change `JOYSTICK_INTERVAL` to 2 as per [this thread.](https://forum.pjrc.com/threads/70501-Teensy-Joystick-Stops-Responding) 
 
 ### Joysticks
 I'm using two [ServoCity 3-axis joysticks with buttons](https://www.robotshop.com/uk/3-axis-joystick-w-button.htm) for the actual joysticks, you need to wire each of the three potentiometers to pins on the Teensy. 
