@@ -64,16 +64,16 @@ int state = 0;
 unsigned long lastChange = 0;
 unsigned long timeout = 250;
 
-//  Sets the brightness of an LED on a given pin
-void SetLED(colour led, float value)
-{
-  //  I've implemented this method as the LEDs are common anode, this means that rather than providing
-  //  the voltage for the LED we're adjusting the value of the drain. This varies the potential between
-  //  the the anode and cathode in the same way but is "backwards" from what most of us are used to.
+// //  Sets the brightness of an LED on a given pin
+// void SetLED(colour led, float value)
+// {
+//   //  I've implemented this method as the LEDs are common anode, this means that rather than providing
+//   //  the voltage for the LED we're adjusting the value of the drain. This varies the potential between
+//   //  the the anode and cathode in the same way but is "backwards" from what most of us are used to.
 
-  int newValue = map(value, 0, 1, 255, 0);
-  analogWrite(led, newValue);
-}
+//   int newValue = map(value, 0, 1, 255, 0);
+//   analogWrite(led, 0);
+// }
 
 void setup()
 {
@@ -83,7 +83,7 @@ void setup()
   // configure the joystick to manual send mode.  This gives precise
   // control over when the computer receives updates, but it does
   // require you to manually call Joystick.send_now().
-  // Joystick.useManualSend(true);
+  Joystick.useManualSend(true);
 
   updateLed = millis();
 
@@ -96,9 +96,13 @@ void setup()
   pinMode(joy2button, INPUT_PULLUP);
   pinMode(encButton, INPUT);
 
-  pinMode(RED, OUTPUT);
-  pinMode(GREEN, OUTPUT);
-  pinMode(BLUE, OUTPUT);
+  // pinMode(RED, OUTPUT);
+  // pinMode(GREEN, OUTPUT);
+  // pinMode(BLUE, OUTPUT);
+
+  // SetLED(RED, 0);
+  // SetLED(GREEN, 0);
+  // SetLED(BLUE, 0);
 
   enc.write(512);
   lastReport = millis();
@@ -130,58 +134,60 @@ int CheckAxisValue(int value, bool invert)
 //  Brighness is taken from the hat angle
 void UpdateLED(bool change)
 {
-  //  "/ 100" creates a float
-  float brightness = map(angle, 0, 1024, 0, 100) / 100.0;
-  switch (state)
-  {
-  case 0:
-    SetLED(RED, brightness);
-    SetLED(GREEN, 0);
-    SetLED(BLUE, 0);
-    break;
-  case 1:
-    SetLED(RED, 0);
-    SetLED(GREEN, brightness);
-    SetLED(BLUE, 0);
-    break;
-  case 2:
-    SetLED(RED, 0);
-    SetLED(GREEN, 0);
-    SetLED(BLUE, brightness);
-    break;
-  }
+  return;
 
-  //  Update only if button pressedn and not in timeout
-  if (change && (millis() - lastChange > timeout))
-  {
-    state++;
-    if (state > 2)
-    {
-      state = 0;
-    }
-    lastChange = millis();
-    Serial.println("Brightness: " + String(brightness));
-  }
+  // //  "/ 100" creates a float
+  // float brightness = map(angle, 0, 1024, 0, 100) / 100.0;
+  // switch (state)
+  // {
+  // case 0:
+  //   SetLED(RED, brightness);
+  //   SetLED(GREEN, 0);
+  //   SetLED(BLUE, 0);
+  //   break;
+  // case 1:
+  //   SetLED(RED, 0);
+  //   SetLED(GREEN, brightness);
+  //   SetLED(BLUE, 0);
+  //   break;
+  // case 2:
+  //   SetLED(RED, 0);
+  //   SetLED(GREEN, 0);
+  //   SetLED(BLUE, brightness);
+  //   break;
+  // }
+
+  // //  Update only if button pressedn and not in timeout
+  // if (change && (millis() - lastChange > timeout))
+  // {
+  //   state++;
+  //   if (state > 2)
+  //   {
+  //     state = 0;
+  //   }
+  //   lastChange = millis();
+  //   Serial.println("Brightness: " + String(brightness));
+  // }
 }
 
 void loop()
 {
-  if(millis() - lastReport >= 1000)
-  {
-    // loop below throwing error
-    SetLED(RED, 1);
-    SetLED(GREEN, 0);
-    SetLED(BLUE, 0);
-    Serial.print(millis());
-    Serial.print(" no reports sent.");
-  }
-  else
-  {
-    // loop below throwing error
-    SetLED(RED, 0);
-    SetLED(GREEN, 1);
-    SetLED(BLUE, 0);
-  }
+  // if(millis() - lastReport >= 1000)
+  // {
+  //   // loop below throwing error
+  //   SetLED(RED, 1);
+  //   SetLED(GREEN, 0);
+  //   SetLED(BLUE, 0);
+  //   Serial.print(millis());
+  //   Serial.print(" no reports sent.");
+  // }
+  // else
+  // {
+  //   // loop below throwing error
+  //   SetLED(RED, 0);
+  //   SetLED(GREEN, 1);
+  //   SetLED(BLUE, 0);
+  // }
 
   if(millis() - lastReport >= reportInterval)
   {
@@ -282,20 +288,30 @@ void loop()
     // if any button changed, print them to the serial monitor
     if (anyChange | encoderChanged)
     {
-      Serial.print("Buttons: ");
-      Serial.print(!allSwitches[0]);
-      Serial.print(!allSwitches[1]);
-      Serial.print(allSwitches[2]);
-      Serial.print(allSwitches[3]);
-      Serial.print(!allSwitches[4]);
-      Serial.print(!allSwitches[5]);
-      Serial.println();
+      if(!allSwitches[5] & encPressed)
+      {
+        Joystick.end();
+        Joystick.begin();
+        Serial.println("Joystick reset.");
+
+      }
+      else
+      {
+        Serial.print("Buttons: ");
+        Serial.print(!allSwitches[0]);
+        Serial.print(!allSwitches[1]);
+        Serial.print(allSwitches[2]);
+        Serial.print(allSwitches[3]);
+        Serial.print(!allSwitches[4]);
+        Serial.print(!allSwitches[5]);
+        Serial.println();
+      }
     }
 
     // Because setup configured the Joystick manual send,
     // the computer does not see any of the changes yet.
     // This send_now() transmits everything all at once.
-    // Joystick.send_now();
+    Joystick.send_now();
     
     lastReport = millis();
   }
