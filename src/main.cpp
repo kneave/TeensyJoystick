@@ -96,6 +96,11 @@ void setup()
   pinMode(joy2button, INPUT_PULLUP);
   pinMode(encButton, INPUT);
 
+  // Set these to midpoint, otherwise they send wrong values until you move them
+  Joystick.Z(midPoint);
+  Joystick.Zrotate(midPoint);
+  Joystick.send_now();
+
   // pinMode(RED, OUTPUT);
   // pinMode(GREEN, OUTPUT);
   // pinMode(BLUE, OUTPUT);
@@ -192,13 +197,19 @@ void loop()
   if(millis() - lastReport >= reportInterval)
   {
     // read 6 analog inputs and use them for the joystick axis
-    Joystick.X(CheckAxisValue(analogRead(LEFT_X), false));
-    Joystick.Y(CheckAxisValue(analogRead(LEFT_Y), true));
-    Joystick.Z(CheckAxisValue(analogRead(LEFT_Z), true));
-    Joystick.Xrotate(CheckAxisValue(analogRead(RIGHT_X), false));
-    Joystick.Yrotate(CheckAxisValue(analogRead(RIGHT_Y), false));
-    Joystick.Zrotate(CheckAxisValue(analogRead(RIGHT_Z), true));
+    Joystick.X(CheckAxisValue(analogRead(LEFT_X), true));
+    Joystick.Y(CheckAxisValue(analogRead(LEFT_Y), false));
+    Joystick.Z(CheckAxisValue(analogRead(LEFT_Z), false));
+    Joystick.Xrotate(CheckAxisValue(analogRead(RIGHT_X), true));
+    Joystick.Yrotate(CheckAxisValue(analogRead(RIGHT_Y), true));
+    Joystick.Zrotate(CheckAxisValue(analogRead(RIGHT_Z), false));
     
+    // Serial.print("Left Rotate: ");
+    // Serial.print(analogRead(LEFT_Z));
+    // Serial.print(", ");
+    // Serial.print(CheckAxisValue(analogRead(LEFT_Z), true));
+    // Serial.println();
+
     // read digital pins and use them for the buttons
     for (int i = 0; i < numSwitches; i++)
     {
@@ -292,6 +303,9 @@ void loop()
       {
         Joystick.end();
         Joystick.begin();
+        Joystick.Z(midPoint);
+        Joystick.Zrotate(midPoint);
+        Joystick.send_now();
         Serial.println("Joystick reset.");
 
       }
